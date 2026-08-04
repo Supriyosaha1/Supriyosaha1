@@ -1,7 +1,2 @@
-<a href="https://github.com/Supriyosaha1">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./dark_mode.svg">
-    <source media="(prefers-color-scheme: light)" srcset="./light_mode.svg">
-    <img alt="Supriyo Saha — cosmologist and researcher" src="./light_mode.svg" width="100%">
-  </picture>
-</a>
+![Supriyo Saha — cosmology researcher](./dark_mode.svg#gh-dark-mode-only)
+![Supriyo Saha — cosmology researcher](./light_mode.svg#gh-light-mode-only)
