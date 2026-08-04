@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Generate a borderless GitHub profile card with a real ASCII portrait."""
+"""Generate light and dark GitHub profile cards with an ASCII portrait."""
 
 from __future__ import annotations
 
+import base64
 import datetime as dt
 import html
 import json
@@ -16,14 +17,11 @@ from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 
 ROOT = Path(__file__).resolve().parent
 PORTRAIT = ROOT / "assets" / "profile.png"
-PORTRAIT_MASK = ROOT / "assets" / "portrait_mask.png"
 USERNAME = "Supriyosaha1"
 
-# Deliberately modest resolution: the face stays recognizable while every
-# character remains visible when GitHub scales the card down.
-ASCII_WIDTH = 58
+ASCII_WIDTH = 60
 ASCII_HEIGHT = 43
-ASCII_RAMP = " .:-=+*#%@"
+ASCII_RAMP = " .,:;irsXA253hMHGS#9B&@"
 
 
 def request_json(url: str) -> object:
@@ -44,10 +42,10 @@ def request_json(url: str) -> object:
 def github_stats() -> dict[str, str]:
     """Fetch public profile statistics, with graceful fallbacks."""
     stats = {
-        "repos": "19",
+        "repos": "17",
         "followers": "7",
-        "stars": "1",
-        "languages": "Jupyter Notebook, Python, HTML, C",
+        "stars": "0",
+        "languages": "Python, Jupyter Notebook, C",
     }
 
     try:
@@ -57,7 +55,8 @@ def github_stats() -> dict[str, str]:
         stats["followers"] = str(user.get("followers", stats["followers"]))
 
         repos: list[dict] = []
-        for page in range(1, 6):
+        page = 1
+        while page <= 5:
             result = request_json(
                 f"https://api.github.com/users/{USERNAME}/repos"
                 f"?per_page=100&page={page}&sort=updated"
@@ -67,9 +66,11 @@ def github_stats() -> dict[str, str]:
             repos.extend(item for item in result if isinstance(item, dict))
             if len(result) < 100:
                 break
+            page += 1
 
         owned = [repo for repo in repos if not repo.get("fork")]
         stats["stars"] = str(sum(int(repo.get("stargazers_count", 0)) for repo in owned))
+
         languages = Counter(
             str(repo["language"])
             for repo in owned
@@ -77,54 +78,40 @@ def github_stats() -> dict[str, str]:
         )
         if languages:
             stats["languages"] = ", ".join(name for name, _ in languages.most_common(4))
-    except Exception as exc:
+    except Exception as exc:  # Keep the card usable if the API is temporarily unavailable.
         print(f"GitHub API warning: {exc}")
 
     return stats
 
 
 def ascii_portrait() -> list[str]:
-    """Convert the real photo into large, low-detail ASCII characters."""
     image = Image.open(PORTRAIT).convert("L")
     image = ImageOps.autocontrast(image, cutoff=1)
-    image = ImageEnhance.Contrast(image).enhance(1.18)
-    edges = image.filter(ImageFilter.FIND_EDGES)
-
+    image = ImageEnhance.Contrast(image).enhance(1.28)
+    image = image.filter(ImageFilter.UnsharpMask(radius=1.4, percent=120, threshold=3))
     image = image.resize((ASCII_WIDTH, ASCII_HEIGHT), Image.Resampling.LANCZOS)
-    edges = edges.resize((ASCII_WIDTH, ASCII_HEIGHT), Image.Resampling.LANCZOS)
-    mask = Image.open(PORTRAIT_MASK).convert("L").resize(
-        (ASCII_WIDTH, ASCII_HEIGHT), Image.Resampling.LANCZOS
-    )
 
     lines: list[str] = []
     for row in range(ASCII_HEIGHT):
-        characters: list[str] = []
+        characters = []
         for column in range(ASCII_WIDTH):
-            coverage = mask.getpixel((column, row)) / 255
-            if coverage < 0.16:
-                characters.append(" ")
-                continue
-
-            darkness = 1 - image.getpixel((column, row)) / 255
-            edge = edges.getpixel((column, row)) / 255
-            tone = min(1.0, darkness * 0.78 + edge * 0.42)
-            # Keep bright skin visible as sparse punctuation, while hair,
-            # glasses, eyes, and clothing use denser characters.
-            tone = max(0.12, tone) * min(1.0, coverage * 1.4)
-            index = round(tone * (len(ASCII_RAMP) - 1))
+            brightness = image.getpixel((column, row))
+            index = round(brightness / 255 * (len(ASCII_RAMP) - 1))
             characters.append(ASCII_RAMP[index])
         lines.append("".join(characters).rstrip())
     return lines
 
 
 def svg_document(theme: dict[str, str], stats: dict[str, str]) -> str:
+    portrait_lines = ascii_portrait()
     line_height = 13
     portrait_x = 30
     portrait_y = 53
+
     portrait_spans = "\n".join(
         f'<tspan x="{portrait_x}" y="{portrait_y + index * line_height}">'
         f"{html.escape(line)}</tspan>"
-        for index, line in enumerate(ascii_portrait())
+        for index, line in enumerate(portrait_lines)
     )
 
     rows = [
@@ -159,7 +146,7 @@ def svg_document(theme: dict[str, str], stats: dict[str, str]) -> str:
     return f'''<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="650" viewBox="0 0 1200 650" role="img" aria-labelledby="title description">
   <title id="title">Supriyo Saha GitHub profile card</title>
-  <desc id="description">Real ASCII portrait, cosmology research interests, and live GitHub statistics.</desc>
+  <desc id="description">ASCII portrait, cosmology research interests, and live GitHub statistics.</desc>
   <style>
     .mono {{ font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace; }}
     .portrait {{ font-family: "Courier New", monospace; font-size: 10px; font-weight: 700; fill: {theme['portrait']}; white-space: pre; }}
@@ -169,8 +156,7 @@ def svg_document(theme: dict[str, str], stats: dict[str, str]) -> str:
     .dots {{ font-family: "JetBrains Mono", Consolas, monospace; font-size: 15px; fill: {theme['dots']}; }}
     .value {{ font-family: "JetBrains Mono", Consolas, monospace; font-size: 15px; fill: {theme['value']}; }}
   </style>
-
-  <!-- Intentionally borderless and transparent: GitHub supplies the background. -->
+  <rect x="3" y="3" width="1194" height="644" rx="18" fill="{theme['background']}" stroke="{theme['border']}" stroke-width="3"/>
   <circle cx="28" cy="27" r="6" fill="#ff5f56"/>
   <circle cx="48" cy="27" r="6" fill="#ffbd2e"/>
   <circle cx="68" cy="27" r="6" fill="#27c93f"/>
@@ -192,6 +178,7 @@ def main() -> None:
     stats = github_stats()
     themes = {
         "dark_mode.svg": {
+            "background": "#0d1117",
             "border": "#30363d",
             "portrait": "#b7c2d0",
             "heading": "#f0f6fc",
@@ -202,6 +189,7 @@ def main() -> None:
             "muted": "#8b949e",
         },
         "light_mode.svg": {
+            "background": "#ffffff",
             "border": "#d0d7de",
             "portrait": "#334155",
             "heading": "#1f2328",
@@ -216,19 +204,6 @@ def main() -> None:
     for filename, theme in themes.items():
         (ROOT / filename).write_text(svg_document(theme, stats), encoding="utf-8")
         print(f"Generated {filename}")
-
-    # A changing URL prevents GitHub's image proxy from showing an old card.
-    cache_key = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d%H%M%S")
-    readme = f'''<a href="https://github.com/{USERNAME}">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./dark_mode.svg?v={cache_key}">
-    <source media="(prefers-color-scheme: light)" srcset="./light_mode.svg?v={cache_key}">
-    <img alt="Supriyo Saha — cosmologist and researcher" src="./light_mode.svg?v={cache_key}" width="100%">
-  </picture>
-</a>
-'''
-    (ROOT / "README.md").write_text(readme, encoding="utf-8")
-    print(f"Updated README.md cache key: {cache_key}")
 
 
 if __name__ == "__main__":
