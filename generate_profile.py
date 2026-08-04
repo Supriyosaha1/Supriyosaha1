@@ -219,12 +219,14 @@ def main() -> None:
 
     # A changing URL prevents GitHub's image proxy from showing an old card.
     cache_key = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d%H%M%S")
-    readme = (
-        "![Supriyo Saha — cosmologist and researcher]"
-        f"(./dark_mode.svg?v={cache_key}#gh-dark-mode-only)\n"
-        "![Supriyo Saha — cosmologist and researcher]"
-        f"(./light_mode.svg?v={cache_key}#gh-light-mode-only)\n"
-    )
+    readme = f'''<a href="https://github.com/{USERNAME}">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./dark_mode.svg?v={cache_key}">
+    <source media="(prefers-color-scheme: light)" srcset="./light_mode.svg?v={cache_key}">
+    <img alt="Supriyo Saha — cosmologist and researcher" src="./light_mode.svg?v={cache_key}" width="100%">
+  </picture>
+</a>
+'''
     (ROOT / "README.md").write_text(readme, encoding="utf-8")
     print(f"Updated README.md cache key: {cache_key}")
 
