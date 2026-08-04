@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate light and dark GitHub profile cards with an ASCII portrait."""
+"""Generate compact light and dark GitHub profile cards for Supriyo Saha."""
 
 from __future__ import annotations
 
@@ -12,16 +12,10 @@ import urllib.request
 from collections import Counter
 from pathlib import Path
 
-from PIL import Image, ImageEnhance, ImageFilter, ImageOps
-
 
 ROOT = Path(__file__).resolve().parent
-PORTRAIT = ROOT / "assets" / "profile.png"
+PORTRAIT = ROOT / "assets" / "profile.jpg"
 USERNAME = "Supriyosaha1"
-
-ASCII_WIDTH = 60
-ASCII_HEIGHT = 43
-ASCII_RAMP = " .,:;irsXA253hMHGS#9B&@"
 
 
 def request_json(url: str) -> object:
@@ -40,12 +34,11 @@ def request_json(url: str) -> object:
 
 
 def github_stats() -> dict[str, str]:
-    """Fetch public profile statistics, with graceful fallbacks."""
     stats = {
-        "repos": "17",
+        "repos": "19",
         "followers": "7",
-        "stars": "0",
-        "languages": "Python, Jupyter Notebook, C",
+        "stars": "1",
+        "languages": "Jupyter Notebook · Python · HTML · C",
     }
 
     try:
@@ -55,8 +48,7 @@ def github_stats() -> dict[str, str]:
         stats["followers"] = str(user.get("followers", stats["followers"]))
 
         repos: list[dict] = []
-        page = 1
-        while page <= 5:
+        for page in range(1, 6):
             result = request_json(
                 f"https://api.github.com/users/{USERNAME}/repos"
                 f"?per_page=100&page={page}&sort=updated"
@@ -66,7 +58,6 @@ def github_stats() -> dict[str, str]:
             repos.extend(item for item in result if isinstance(item, dict))
             if len(result) < 100:
                 break
-            page += 1
 
         owned = [repo for repo in repos if not repo.get("fork")]
         stats["stars"] = str(sum(int(repo.get("stargazers_count", 0)) for repo in owned))
@@ -77,99 +68,99 @@ def github_stats() -> dict[str, str]:
             if repo.get("language")
         )
         if languages:
-            stats["languages"] = ", ".join(name for name, _ in languages.most_common(4))
-    except Exception as exc:  # Keep the card usable if the API is temporarily unavailable.
+            stats["languages"] = " · ".join(name for name, _ in languages.most_common(4))
+    except Exception as exc:
         print(f"GitHub API warning: {exc}")
 
     return stats
 
 
-def ascii_portrait() -> list[str]:
-    image = Image.open(PORTRAIT).convert("L")
-    image = ImageOps.autocontrast(image, cutoff=1)
-    image = ImageEnhance.Contrast(image).enhance(1.28)
-    image = image.filter(ImageFilter.UnsharpMask(radius=1.4, percent=120, threshold=3))
-    image = image.resize((ASCII_WIDTH, ASCII_HEIGHT), Image.Resampling.LANCZOS)
-
-    lines: list[str] = []
-    for row in range(ASCII_HEIGHT):
-        characters = []
-        for column in range(ASCII_WIDTH):
-            brightness = image.getpixel((column, row))
-            index = round(brightness / 255 * (len(ASCII_RAMP) - 1))
-            characters.append(ASCII_RAMP[index])
-        lines.append("".join(characters).rstrip())
-    return lines
+def portrait_data_uri() -> str:
+    encoded = base64.b64encode(PORTRAIT.read_bytes()).decode("ascii")
+    return f"data:image/jpeg;base64,{encoded}"
 
 
 def svg_document(theme: dict[str, str], stats: dict[str, str]) -> str:
-    portrait_lines = ascii_portrait()
-    line_height = 13
-    portrait_x = 30
-    portrait_y = 53
-
-    portrait_spans = "\n".join(
-        f'<tspan x="{portrait_x}" y="{portrait_y + index * line_height}">'
-        f"{html.escape(line)}</tspan>"
-        for index, line in enumerate(portrait_lines)
-    )
+    photo = portrait_data_uri()
+    updated = dt.datetime.now(dt.timezone.utc).strftime("%d %b %Y")
 
     rows = [
-        ("Role", "Integrated PhD Student"),
-        ("Institute", "TIFR Mumbai"),
-        ("Field", "Cosmology & Astrophysics"),
-        ("Research", "Lyα Emitters & Reionization"),
-        ("Simulations", "RAMSES, RASCAS, MP-Gadget"),
-        ("Languages", "Python, C++, Bash"),
-        ("Interests", "Radiative Transfer, ML, JWST"),
-        ("Outreach", "50 Shades of Science"),
-    ]
-    stat_rows = [
-        ("Public repos", stats["repos"]),
-        ("Stars earned", stats["stars"]),
-        ("Followers", stats["followers"]),
-        ("Top languages", stats["languages"]),
-        ("Updated", dt.datetime.now(dt.timezone.utc).strftime("%d %b %Y UTC")),
+        ("ROLE", "Integrated PhD student · TIFR Mumbai"),
+        ("RESEARCH", "Lyα emitters during cosmic reionization"),
+        ("METHODS", "Radiative transfer · cosmological simulations"),
+        ("TOOLS", "Python · RASCAS · RAMSES · MP-Gadget"),
     ]
 
-    def make_rows(items: list[tuple[str, str]], start_y: int) -> str:
-        parts: list[str] = []
-        for index, (key, value) in enumerate(items):
-            y = start_y + index * 31
-            parts.append(
-                f'<text x="510" y="{y}" class="key">{html.escape(key)}</text>'
-                f'<text x="655" y="{y}" class="dots">................</text>'
-                f'<text x="805" y="{y}" class="value">{html.escape(value)}</text>'
-            )
-        return "\n".join(parts)
+    row_svg = []
+    for index, (label, value) in enumerate(rows):
+        y = 148 + index * 45
+        row_svg.append(
+            f'<text x="328" y="{y}" class="label">{html.escape(label)}</text>'
+            f'<text x="430" y="{y}" class="value">{html.escape(value)}</text>'
+        )
+
+    stats_svg = []
+    stat_items = [
+        ("REPOS", stats["repos"]),
+        ("STARS", stats["stars"]),
+        ("FOLLOWERS", stats["followers"]),
+    ]
+    for index, (label, value) in enumerate(stat_items):
+        x = 328 + index * 136
+        stats_svg.append(
+            f'<rect x="{x}" y="332" width="120" height="58" rx="10" fill="{theme["chip"]}" stroke="{theme["border"]}"/>'
+            f'<text x="{x + 12}" y="352" class="stat-label">{label}</text>'
+            f'<text x="{x + 12}" y="377" class="stat-value">{html.escape(value)}</text>'
+        )
 
     return f'''<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="650" viewBox="0 0 1200 650" role="img" aria-labelledby="title description">
-  <title id="title">Supriyo Saha GitHub profile card</title>
-  <desc id="description">ASCII portrait, cosmology research interests, and live GitHub statistics.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="920" height="430" viewBox="0 0 920 430" role="img"
+     aria-labelledby="title description">
+  <title id="title">Supriyo Saha — cosmology researcher</title>
+  <desc id="description">Profile portrait, research interests, tools, and public GitHub statistics.</desc>
+  <defs>
+    <clipPath id="portraitClip">
+      <rect x="28" y="66" width="260" height="330" rx="18"/>
+    </clipPath>
+    <linearGradient id="accentLine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="{theme['accent']}"/>
+      <stop offset="1" stop-color="{theme['accent2']}"/>
+    </linearGradient>
+  </defs>
   <style>
     .mono {{ font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace; }}
-    .portrait {{ font-family: "Courier New", monospace; font-size: 10px; font-weight: 700; fill: {theme['portrait']}; white-space: pre; }}
-    .heading {{ font-family: "JetBrains Mono", Consolas, monospace; font-size: 25px; font-weight: 700; fill: {theme['heading']}; }}
-    .section {{ font-family: "JetBrains Mono", Consolas, monospace; font-size: 17px; font-weight: 700; fill: {theme['section']}; }}
-    .key {{ font-family: "JetBrains Mono", Consolas, monospace; font-size: 15px; font-weight: 700; fill: {theme['key']}; }}
-    .dots {{ font-family: "JetBrains Mono", Consolas, monospace; font-size: 15px; fill: {theme['dots']}; }}
-    .value {{ font-family: "JetBrains Mono", Consolas, monospace; font-size: 15px; fill: {theme['value']}; }}
+    .name {{ font: 700 28px "JetBrains Mono", "Cascadia Code", Consolas, monospace; fill: {theme['heading']}; }}
+    .tagline {{ font: 14px "JetBrains Mono", "Cascadia Code", Consolas, monospace; fill: {theme['muted']}; }}
+    .label {{ font: 700 12px "JetBrains Mono", "Cascadia Code", Consolas, monospace; letter-spacing: .7px; fill: {theme['key']}; }}
+    .value {{ font: 15px "JetBrains Mono", "Cascadia Code", Consolas, monospace; fill: {theme['value']}; }}
+    .stat-label {{ font: 700 10px "JetBrains Mono", "Cascadia Code", Consolas, monospace; letter-spacing: .8px; fill: {theme['muted']}; }}
+    .stat-value {{ font: 700 19px "JetBrains Mono", "Cascadia Code", Consolas, monospace; fill: {theme['heading']}; }}
   </style>
-  <rect x="3" y="3" width="1194" height="644" rx="18" fill="{theme['background']}" stroke="{theme['border']}" stroke-width="3"/>
-  <circle cx="28" cy="27" r="6" fill="#ff5f56"/>
-  <circle cx="48" cy="27" r="6" fill="#ffbd2e"/>
-  <circle cx="68" cy="27" r="6" fill="#27c93f"/>
-  <text x="600" y="32" text-anchor="middle" class="mono" font-size="13" fill="{theme['muted']}">supriyo@cosmos: ~</text>
-  <line x1="475" y1="53" x2="475" y2="616" stroke="{theme['border']}" stroke-width="2"/>
-  <text class="portrait" xml:space="preserve">{portrait_spans}</text>
-  <text x="510" y="82" class="heading">Supriyo Saha</text>
-  <text x="510" y="108" class="mono" font-size="14" fill="{theme['muted']}">cosmologist · researcher · science communicator</text>
-  <line x1="510" y1="129" x2="1155" y2="129" stroke="{theme['border']}" stroke-width="2"/>
-  {make_rows(rows, 163)}
-  <text x="510" y="431" class="section">GitHub statistics</text>
-  <line x1="510" y1="446" x2="1155" y2="446" stroke="{theme['border']}" stroke-width="2"/>
-  {make_rows(stat_rows, 479)}
+
+  <rect x="2" y="2" width="916" height="426" rx="18" fill="{theme['background']}" stroke="{theme['border']}" stroke-width="3"/>
+  <rect x="3" y="3" width="914" height="43" rx="16" fill="{theme['titlebar']}"/>
+  <rect x="3" y="30" width="914" height="17" fill="{theme['titlebar']}"/>
+  <circle cx="25" cy="24" r="6" fill="#ff5f56"/>
+  <circle cx="45" cy="24" r="6" fill="#ffbd2e"/>
+  <circle cx="65" cy="24" r="6" fill="#27c93f"/>
+  <text x="460" y="29" text-anchor="middle" class="mono" font-size="12" fill="{theme['muted']}">supriyo@cosmos: ~/profile</text>
+
+  <image x="28" y="66" width="260" height="330" preserveAspectRatio="xMidYMid slice"
+         clip-path="url(#portraitClip)" href="{photo}" xlink:href="{photo}"/>
+  <rect x="28" y="66" width="260" height="330" rx="18" fill="none" stroke="{theme['border']}" stroke-width="2"/>
+
+  <text x="328" y="84" class="name">Supriyo Saha</text>
+  <text x="328" y="108" class="tagline">cosmologist · researcher · science communicator</text>
+  <rect x="328" y="120" width="550" height="3" rx="2" fill="url(#accentLine)"/>
+
+  {''.join(row_svg)}
+
+  <text x="328" y="310" class="mono" font-size="12" fill="{theme['muted']}">TOP LANGUAGES  ·  {html.escape(stats['languages'])}</text>
+  {''.join(stats_svg)}
+
+  <text x="328" y="414" class="mono" font-size="12" fill="{theme['accent']}">$ studying light from the first galaxies_</text>
+  <text x="878" y="414" text-anchor="end" class="mono" font-size="10" fill="{theme['muted']}">updated {updated}</text>
 </svg>
 '''
 
@@ -179,25 +170,27 @@ def main() -> None:
     themes = {
         "dark_mode.svg": {
             "background": "#0d1117",
-            "border": "#30363d",
-            "portrait": "#b7c2d0",
+            "titlebar": "#111923",
+            "chip": "#111923",
+            "border": "#303b49",
             "heading": "#f0f6fc",
-            "section": "#d2a8ff",
-            "key": "#ffa657",
-            "dots": "#484f58",
-            "value": "#79c0ff",
-            "muted": "#8b949e",
+            "key": "#f0a45d",
+            "value": "#b9d9f5",
+            "muted": "#8491a1",
+            "accent": "#7dd3fc",
+            "accent2": "#c084fc",
         },
         "light_mode.svg": {
             "background": "#ffffff",
+            "titlebar": "#f6f8fa",
+            "chip": "#f6f8fa",
             "border": "#d0d7de",
-            "portrait": "#334155",
             "heading": "#1f2328",
-            "section": "#8250df",
-            "key": "#953800",
-            "dots": "#afb8c1",
+            "key": "#9a4d00",
             "value": "#0969da",
             "muted": "#656d76",
+            "accent": "#0969da",
+            "accent2": "#8250df",
         },
     }
 
