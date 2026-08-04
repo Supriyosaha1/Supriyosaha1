@@ -9,7 +9,7 @@ This folder is ready for the GitHub profile repository:
 1. Extract `Supriyosaha1-profile-ready.zip` on your computer.
 2. Open `https://github.com/Supriyosaha1/Supriyosaha1`.
 3. Choose **Add file → Upload files**.
-4. Upload `README.md`, `generate_profile.py`, `dark_mode.svg`, `light_mode.svg`, and the `assets` folder. The displayed portrait comes from `assets/ascii_portrait_clean.png`; it contains only ASCII glyphs on transparency.
+4. Upload `README.md`, `generate_profile.py`, `dark_mode.svg`, `light_mode.svg`, and the `assets` folder. The generator converts your real `assets/profile.png` photo into large ASCII characters and uses `assets/portrait_mask.png` only to remove the background.
 5. GitHub's normal Upload files screen may not preserve the hidden `.github` folder. Create the workflow separately with **Add file → Create new file**.
 6. Name that file `.github/workflows/profile-card.yml` and paste the contents of the included workflow file.
 7. Commit everything to `main`.
@@ -21,7 +21,7 @@ This folder is ready for the GitHub profile repository:
 3. Go to **Actions → Update profile card**.
 4. Choose **Run workflow → Run workflow**.
 
-The workflow refreshes the public repository count, stars, followers, top languages, and update date every day.
+The workflow refreshes the public repository count, stars, followers, top languages, update date, and README cache key every day.
 
 ## Important
 
