@@ -1,0 +1,91 @@
+name: Update ASCII profile card
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate-card:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: hu553in/ascii-profile-card@v1
+        with:
+          config: |
+            login: Supriyosaha1
+
+            art:
+              seed: daily
+              width: 420
+              columns: 42
+              rows: 24
+              scale: 2.4
+              warp: 2.4
+              bands: 3.4
+              contrast: 2.6
+              octaves: 4
+
+            card:
+              align: left
+              lowercase: false
+              lines:
+                - { type: header, text: "Supriyo Saha" }
+                - { type: kv, key: Role, value: "Integrated PhD Student" }
+                - { type: kv, key: Institute, value: "TIFR Mumbai" }
+                - { type: kv, key: Field, value: "Cosmology & Astrophysics" }
+                - { type: kv, key: Research, value: "Lyα Emitters & Reionization" }
+                - { type: blank }
+                - { type: kv, key: Simulations, value: "RAMSES, RASCAS, MP-Gadget" }
+                - { type: kv, key: Languages, value: "Python, C++, Bash" }
+                - { type: kv, key: Interests, value: "Radiative Transfer, ML, JWST" }
+                - { type: kv, key: Outreach, value: "50 Shades of Science" }
+                - { type: blank }
+                - { type: section, title: "GitHub Statistics" }
+                - { type: kv, key: Repositories, value: "{repos}" }
+                - { type: kv, key: Contributed To, value: "{contributedRepos} repositories" }
+                - { type: kv, key: Stars, value: "{stars}" }
+                - { type: kv, key: Followers, value: "{followers}" }
+                - { type: kv, key: Contributions, value: "{contributions}" }
+                - { type: kv, key: Top Languages, value: "{topLanguages}" }
+                - { type: kv, key: Lines of Code, value: "{loc}" }
+
+            layout:
+              charWidthPx: 9.9
+              columnGapPx: 24
+              cornerRadiusPx: 15
+              fontFamily: "'JetBrains Mono', 'Cascadia Code', Consolas, monospace"
+              fontSizePx: 16
+              paddingPx: 16
+              rowHeightPx: 20
+              ruleWidth: 56
+              valueColumn: 20
+
+            output:
+              dark: dark_mode.svg
+              light: light_mode.svg
+
+            themes:
+              dark:
+                background: "#0d1117"
+                text: "#c9d1d9"
+                key: "#d2a8ff"
+                value: "#79c0ff"
+                dots: "#484f58"
+                added: "#3fb950"
+                deleted: "#f85149"
+
+              light:
+                background: "#ffffff"
+                text: "#24292f"
+                key: "#8250df"
+                value: "#0969da"
+                dots: "#afb8c1"
+                added: "#1a7f37"
+                deleted: "#cf222e"
